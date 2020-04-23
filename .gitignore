@@ -1,0 +1,8 @@
+# Ignore File
+*.ipynb_checkpoints
+*.png
+*.pts
+*.wav
+*.h
+*.csv
+*.training-checkpoint.csv
