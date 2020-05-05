@@ -60,6 +60,7 @@ class Video_Frame_Data(Dataset):
         ###Read Frames
         START_PAD = Image.new(mode = "RGB", size = (256, 256), color = (255, 255, 255) )
         END_PAD= Image.new(mode = "RGB", size = (256, 256), color =(0, 0, 0))
+        
         img=self.transform(START_PAD).unsqueeze(0)
         END_img=self.transform(END_PAD).unsqueeze(0)
         frame_len=len(os.listdir(folder_name))
@@ -87,5 +88,6 @@ class Video_Frame_Data(Dataset):
      
             
         img=torch.cat((img,END_img))
+        img=img[1: -1]
         return (img,audio_img,labels)
     

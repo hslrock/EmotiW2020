@@ -77,7 +77,7 @@ class MultiHeadAttention(nn.Module):
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
         sz_b, len_q, len_k, len_v = q.size(0), q.size(1), k.size(1), v.size(1)
 
-        residual = q
+        residual = v
         q = self.layer_norm(q)
 
         # Pass through the pre-attention projection: b x lq x (n*dv)
@@ -85,22 +85,22 @@ class MultiHeadAttention(nn.Module):
         q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
         k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
         v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
-
+        #v = v.view(sz_b, len_v, n_head, d_v)
         # Transpose for attention dot product: b x n x lq x dv
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
         
         if mask is not None:
             mask = mask.unsqueeze(1)   # For head axis broadcasting.
 
-        q, attn = self.attention(q, k, v, mask=mask)
+        z, attn = self.attention(q, k, v, mask=mask)
 
         # Transpose to move the head dimension back: b x lq x n x dv
         # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
-        q = q.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
-        q = self.dropout(self.fc(q))
+        z = z.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
+        z = self.dropout(self.fc(z))
 
-        q += residual
+        z += residual
       
-        q=self.avgpool1(q.transpose(1,2))
+        z=self.avgpool1(z.transpose(1,2))
 
-        return q, attn
+        return z, attn

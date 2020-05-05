@@ -6,7 +6,7 @@ from module import transformer,densenet
 
 class Video_Feature(nn.Module):
     
-    def __init__(self,frame=16,dim=1000,joint=True,grayscale=True,classfication=True):
+    def __init__(self,frame=26,dim=1000,joint=True,grayscale=True,classfication=True):
         super(Video_Feature, self).__init__()
         self.label=1
         self.classfication=classfication
@@ -20,28 +20,32 @@ class Video_Feature(nn.Module):
         self.fc2=nn.Linear(1000,512)
         self.fc3=nn.Linear(512, self.label)
         self.joint=joint
-        self.posencoding=transformer.PositionalEncoding(512)
+        self.posencoding=transformer.PositionalEncoding(512,n_position=frame)
         
-        self.transformer=transformer.MultiHeadAttention(frame=frame)
-    def forward(self,x):
-  
-        first=True
-        cnn_embed_seq = []
+        self.transformer=transformer.MultiHeadAttention(d_k=256,d_v=256,n_head=2,frame=frame)
         
+    def frame_embedder(self,x,t):
+        x1 = self.fc2(self.densenet(x[:, t, :, :, :]))  # Pretrained_Densenet
+        x1 = x1.view(x1.size(0), -1)
+        
+        return x1
+        
+    def stack_frame(self,x):
         ##Transformation to: Frames*Channel*width*height
-        
+
+        cnn_embed_seq = []
         for t in range(x.size(1)):
             with torch.no_grad():
-
-                x1 = self.fc2(self.densenet(x[:, t, :, :, :]))  # ResNet
-                #print(x[:, t, :, :, :].shape)
-                x1 = x1.view(x1.size(0), -1)
-               # print(x[:, t, :, :, :].shape)
-                cnn_embed_seq.append(x1)
-              
+                x1=self.frame_embedder(x,t)
+                cnn_embed_seq.append(x1)            
         cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)
-        cnn_embed_seq=self.posencoding(cnn_embed_seq) 
         
+        return cnn_embed_seq
+        
+    def forward(self,x):
+        cnn_embed_seq=self.stack_frame(x)
+        
+        cnn_embed_seq=self.posencoding(cnn_embed_seq) 
         
         ##Input to Transformer
         

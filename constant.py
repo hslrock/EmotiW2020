@@ -1,3 +1,3 @@
 
-AFFECTNETPATH="../../../hdd/cropped_Annotated"
+AFFECTNETPATH="../../../hdd/Dataset/AffectNet/cropped_Annotated"
 
