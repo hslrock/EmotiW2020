@@ -27,6 +27,19 @@ class pre_train_data(Dataset):
         
         return img
         
+class Video_Embedding_Data(Dataset):
+    def __init__(self, embed_file,label_file,frame=24):
+        self._table_embedding = pd.read_csv(embed_file)
+        self._table_label = pd.read_csv(label_file,delimiter=' ')
+        self.frame=frame
+    def __len__(self):
+        return len(self._table_embedding)
+
+    def __getitem__(self, idx):
+        embedding=torch.from_numpy(np.array(self._table_embedding.Embedding[idx].split(),dtype=float)).reshape((self.frame,-1))
+        labels = torch.from_numpy(np.array(self._table_label.Label[idx]))-1
+        
+        return (embedding,labels.long())
     
 class Video_Frame_Data(Dataset):
     def __init__(self, csv_file,base_path_v=None,base_path_a=None,strict_num=16,strict_name=True,name_format=9,transform=None):

@@ -15,8 +15,7 @@ class Face_Feature(nn.Module):
   
         x=self.resnet1(x)  
         x1=self.tanh(self.fc1(x))
-        x2=self.tanh(self.fc2(x))
-        return x1,x2
+        return x1
     
 if __name__ == '__main__':
     print("hi")
