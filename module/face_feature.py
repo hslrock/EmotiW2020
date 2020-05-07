@@ -8,8 +8,7 @@ class Face_Feature(nn.Module):
     def __init__(self):
         super(Face_Feature, self).__init__()
         self.resnet1=resnet_o.resnet18()
-        self.fc1=nn.Linear(1000,1)
-        self.fc2=nn.Linear(1000,1)
+        self.fc1=nn.Linear(100,1)
         self.tanh=nn.Tanh()
     def forward(self,x):
   
