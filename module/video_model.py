@@ -15,6 +15,7 @@ class Video_Feature(nn.Module):
             self.label=3
 
         #self.resnet_1=resnet.resnet18(dim=dim,grayscale=grayscale)
+        
         self.densenet=densenet.densenet121(pretrained=True)
         self.dim_frame=1000
         self.dim_face=100
