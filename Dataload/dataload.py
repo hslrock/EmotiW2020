@@ -7,6 +7,7 @@ import numpy as np
 from src import detect_faces, show_bboxes
 from PIL import Image
 import torch
+
 np_load_old = np.load
 
 np.load = lambda *a,**k: np_load_old(*a, allow_pickle=True, **k)
@@ -34,6 +35,7 @@ class Video_Embedding_Data(Dataset):
         self._table_embedding = pd.read_csv(embed_file)
         self._table_label = pd.read_csv(label_file,delimiter=' ')
         self.frame=frame
+        
     def __len__(self):
         return len(self._table_embedding)
 
@@ -67,6 +69,7 @@ class Video_Frame_Data(Dataset):
                      transforms.Resize((256,256)),
                      transforms.ToTensor(),   
                      transforms.Normalize((0.5,0.5,0.5 ), (0.5, 0.5,0.5))])
+        self.endPad=self.transform(Image.new(mode='RGB', size=(256,256), color=0))
     def __len__(self):
         return len(self._table)
 
@@ -88,31 +91,28 @@ class Video_Frame_Data(Dataset):
     
 
             
-            
-        frame_len=len(os.listdir(folder_name))
+        frame_raw_list=os.listdir(folder_name)
+        frame_len=len(frame_raw_list)
+
+        frame_raw_list=sorted(frame_raw_list)
+
         frame_list=[]
         if frame_len<self.frame_num:
             for index_0 in range(frame_len):
-                frame_path=os.path.join(folder_name,os.listdir(folder_name)[index_0])
+                frame_path=os.path.join(folder_name,frame_raw_list[index_0])               
                 tempimg=Image.open(frame_path)       
-               # frame_class=frame(tempimg,frame_path)
                 frame_list.append(self.transform(tempimg))
+            
         else:    
             frame_index=(np.linspace(0,frame_len-1,self.frame_num,dtype=int))
 
             for index_2 in frame_index:
-                frame_path=os.path.join(folder_name,os.listdir(folder_name)[index_2])
+                frame_path=os.path.join(folder_name,frame_raw_list[index_2])
                 tempimg=Image.open(frame_path)
-                #frame_class=frame(tempimg,frame_path)
                 frame_list.append(self.transform(tempimg))
+        while(len(frame_list)<self.frame_num):
+            frame_list.append(self.endPad)
         frame_data=torch.stack(frame_list,dim=0)
-
-        
-
-
-
-                
-                
             
         return (frame_data,audio_img,labels)
     
@@ -170,4 +170,26 @@ class frame():
         
     
         
+class Frame_Face(Dataset):
+    def __init__(self,csv_file,sub_csv_file=None,
+                 base_path_v=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False):
         
+        self.max_frame_num=24
+        self._table = pd.read_csv(csv_file,delimiter=' ')
+        if sub_csv_file is None:
+            self._table_embedding=None
+        else:
+            self._table_embedding=pd.read_csv(sub_csv_file)
+        self.frame_num = frame_num
+        self._base_path_v=base_path_v
+        self._base_path_a=base_path_a
+        self.embedding=embedding
+        if strict_name:
+            self.name_format=name_format
+            
+
+        self.transform=transforms.Compose([
+                     transforms.Resize((256,256)),
+                     transforms.ToTensor(),   
+                     transforms.Normalize((0.5,0.5,0.5 ), (0.5, 0.5,0.5))])
+        self.endPad=self.transform(Image.new(mode='RGB', size=(256,256), color=0))
