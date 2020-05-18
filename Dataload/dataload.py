@@ -51,7 +51,7 @@ class Video_Frame_Data(Dataset):
     def __init__(self,csv_file,sub_csv_file=None,
                  base_path_v=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False):
         
-        self.max_frame_num=24
+        self.max_frame_num=26
         self._table = pd.read_csv(csv_file,delimiter=' ')
         if sub_csv_file is None:
             self._table_embedding=None
@@ -95,8 +95,9 @@ class Video_Frame_Data(Dataset):
         frame_len=len(frame_raw_list)
 
         frame_raw_list=sorted(frame_raw_list)
-
+       # print(frame_raw_list)
         frame_list=[]
+        
         if frame_len<self.frame_num:
             for index_0 in range(frame_len):
                 frame_path=os.path.join(folder_name,frame_raw_list[index_0])               

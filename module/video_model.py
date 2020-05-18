@@ -10,7 +10,7 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         self.label=label
         if model is None:
-            self.embedder=densenet.densenet121(pretrained=False)
+            self.embedder=densenet.densenet121(pretrained=True)
             self.fc1=nn.Linear(1000,512)
         else:
             self.embedder=model
