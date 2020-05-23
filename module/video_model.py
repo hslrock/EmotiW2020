@@ -14,16 +14,16 @@ class Encoder(nn.Module):
             self.fc1=nn.Linear(1000,512)
         else:
             self.embedder=model
+            self.fc1=nn.Linear(1000,512)
         self.isframe=isframe
         self.dim_frame=dim
         self.num_frame=num_frame
-        self.fc1=nn.Linear(self.dim_frame,256)
-        
+
         #self.fc1=nn.Linear(1000,512)
-        self.fc2=nn.Linear(256, self.label)
+        self.fc2=nn.Linear(512, self.label)
         
         self.posencoding=transformer.PositionalEncoding(self.dim_frame,n_position=num_frame)
-        self.transformer=transformer.MultiHeadAttention(d_model=256,d_k=128,d_v=128,n_head=2,frame=num_frame)
+        self.transformer=transformer.MultiHeadAttention(d_model=512,d_k=256,d_v=256,n_head=2,frame=num_frame)
         
     def img_embedder(self,x,t,embedder):
         x1 = (embedder(x[:, t, :, :, :]))  # Pretrained_Densenet
@@ -51,15 +51,9 @@ class Encoder(nn.Module):
         return cnn_embed_seq
         
     def forward(self,x):
-        if  self.check_raw(x,self.dim_frame):
-            cnn_embed_seq=self.stack_frame(x)  
-            cnn_embed_seq=self.posencoding(cnn_embed_seq) 
-           # return cnn_embed_seq
-        else:
-            cnn_embed_seq=x
-        ##Input to Transformer
-        
-        cnn_embed_seq=self.fc1(cnn_embed_seq) 
+
+        cnn_embed_seq=x
+        cnn_embed_seq=self.posencoding(cnn_embed_seq) 
         ##Dimension Reduction
         output=self.transformer(cnn_embed_seq,cnn_embed_seq,cnn_embed_seq)
         
@@ -80,24 +74,27 @@ class Encoder(nn.Module):
 class Video_modeller(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
-    def __init__(self,frame):
+    def __init__(self,frame,face_model,frame_model):
         super().__init__()
         
-        self.en1=Encoder(num_frame=5,dim=100,model=None,isframe=0,label=256)
-        self.en2=Encoder(num_frame=frame,dim=256,model=None,isframe=1,label=3)
-        
-        self.fc1=nn.Linear(1000,256)
-        self.fc2=nn.Linear(512,256)
+        self.en1=Encoder(num_frame=5,dim=512,model=face_model,isframe=0,label=512)
+        self.en2=Encoder(num_frame=frame,dim=512,model=None,isframe=1,label=3)
+        self.embedder=densenet.densenet121(pretrained=True)
+        self.fc1=nn.Linear(1000,512)
+        self.fc2=nn.Linear(1000,512)
+        self.fc3=nn.Linear(1024,512)
     def face_embedder(self,x,t,encoder):
         x1 = (encoder(x[:, t,:]))  # Pretrained_Densenet            
         x1 = x1.view(x1.size(0), -1)
+        return x1
+    def frame_embedder(self,x,t,embedder):
+        x1 = (embedder(x[:, t, :, :, :]))  # Pretrained_Densenet
+        x1 = x1.view(x1.size(0), -1)
         
         return x1
-
     def check_raw(self,x,dim):
-        if x.shape[-1]==dim:
-            return False
-        return True 
+        return x.shape[-1]==dim
+
         
         return None
     def stack_face_encoder(self,x):
@@ -111,15 +108,35 @@ class Video_modeller(nn.Module):
         cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)
         return cnn_embed_seq
     
+    def stack_frame(self,x):
+        ##Transformation to: Frames*Channel*width*height
+
+        cnn_embed_seq = []
+     
+        for t in range(x.size(1)):
+            with torch.no_grad():
+                x1=self.frame_embedder(x,t,self.embedder)
+                cnn_embed_seq.append(x1)            
+        cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)
+        
+        return cnn_embed_seq
+    
     def forward(self,x,y):
-        initial_time=time.time()
         if y is not None:
-            start=time.time()
-            frame_local=self.stack_face_encoder(y)
-            end=time.time()
-            print(end-start)
+            if not (self.check_raw((x,1000))):
+                frame_local=self.stack_face_encoder(y)
+            else:
+                frame_local=y
+            frame_local=self.fc1(frame_local)
+
         if x is not None:
-            frame_global=self.fc1(x)
+            if not (self.check_raw(x,1000)):
+                frame_global=self.stack_frame(x)
+                   
+            else:
+                frame_global=x    
+            frame_global=self.fc2(frame_global)
+            
         if y is None:
             return self.en2(frame_global)
         if x is None:
@@ -127,9 +144,8 @@ class Video_modeller(nn.Module):
             
         
         frames_embedding=torch.cat((frame_global,frame_local),2)
-        frames_embedding=self.fc2(frames_embedding)
-        vide_embed=self.en2(frames_embedding) 
-        finish_time=time.time()
-        print(finish_time-initial_time)
-        return vide_embed
+        frames_embedding=self.fc3(frames_embedding)
+        video_embed=self.en2(frames_embedding) 
+
+        return video_embed
         

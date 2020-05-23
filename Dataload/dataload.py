@@ -30,28 +30,12 @@ class pre_train_data(Dataset):
         
         return img
         
-class Video_Embedding_Data(Dataset):
-    def __init__(self, embed_file,label_file,frame=24):
-        self._table_embedding = pd.read_csv(embed_file)
-        self._table_label = pd.read_csv(label_file,delimiter=' ')
-        self.frame=frame
-        
-    def __len__(self):
-        return len(self._table_embedding)
 
-    def __getitem__(self, idx):
-        embedding=torch.from_numpy(np.array(self._table_embedding.Embedding[idx].split(),dtype=float)).reshape((self.frame,-1))
-        
-        labels = torch.from_numpy(np.array(self._table_label.Label[idx]))-1
-        empty=0
-        return (embedding,empty,labels.long())
-    
-    
 class Video_Frame_Data(Dataset):
     def __init__(self,csv_file,sub_csv_file=None,
-                 base_path_v=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False):
+                 base_path_v=None,face_path=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False,direct=False):
         
-        self.max_frame_num=26
+        self.max_frame_num=25
         self._table = pd.read_csv(csv_file,delimiter=' ')
         if sub_csv_file is None:
             self._table_embedding=None
@@ -60,10 +44,12 @@ class Video_Frame_Data(Dataset):
         self.frame_num = frame_num
         self._base_path_v=base_path_v
         self._base_path_a=base_path_a
+        self.face_path=face_path
+        self.face_num=5
         self.embedding=embedding
         if strict_name:
             self.name_format=name_format
-            
+        self.direct=direct
 
         self.transform=transforms.Compose([
                      transforms.Resize((256,256)),
@@ -74,9 +60,21 @@ class Video_Frame_Data(Dataset):
         return len(self._table)
 
     def __getitem__(self, idx):
+        
+        face_folder_name = os.path.join(self.face_path,self._table.Vid_name[idx])
+        faces_path=face_folder_name+'.pt'
+        temp_face_data=torch.load(faces_path)
+            
+        if self.frame_num<self.max_frame_num:
+                face_data=torch.empty(size=(self.frame_num,self.face_num,3,64,64),dtype=torch.double)
+                index=np.linspace(0,self.max_frame_num-1,self.frame_num,dtype=int)
+                for i,copy in enumerate(index):
+                    face_data[i]=temp_face_data[copy]
+        else:
+            face_data=temp_face_data
+        
         folder_name = os.path.join(self._base_path_v,self._table.Vid_name[idx])
-        first=True
-        audio_img=np.zeros((1,1))
+
         labels = torch.from_numpy(np.array(self._table.Label[idx]))-1
             
         if self._table_embedding is not None:
@@ -87,35 +85,50 @@ class Video_Frame_Data(Dataset):
  
                 for i,copy in enumerate(index):
                     frame_data[i]=temp_frame_embedding[copy]
-            return (frame_data,audio_img,labels)
-    
-
-            
-        frame_raw_list=os.listdir(folder_name)
-        frame_len=len(frame_raw_list)
-
-        frame_raw_list=sorted(frame_raw_list)
-       # print(frame_raw_list)
-        frame_list=[]
+            return (frame_data,face_data,labels)
         
-        if frame_len<self.frame_num:
-            for index_0 in range(frame_len):
-                frame_path=os.path.join(folder_name,frame_raw_list[index_0])               
-                tempimg=Image.open(frame_path)       
-                frame_list.append(self.transform(tempimg))
+        if self.direct:
             
-        else:    
-            frame_index=(np.linspace(0,frame_len-1,self.frame_num,dtype=int))
+            video_path=folder_name+'.pt'
+            
+            temp_frame_data=torch.load(video_path)
+            
+            if self.frame_num<self.max_frame_num:
+                frame_data=torch.empty(size=(self.frame_num,3,256,256),dtype=torch.double)
+                index=np.linspace(0,self.max_frame_num-1,self.frame_num,dtype=int)
+                for i,copy in enumerate(index):
+                    frame_data[i]=temp_frame_data[copy]
+            else:
+                frame_data=temp_frame_data
+                
+            return (frame_data,face_data,labels)
+          #  frame_data=torch.load(os.path.join(folder_name))
+        else:
+            frame_raw_list=os.listdir(folder_name)
+            frame_len=len(frame_raw_list)
 
-            for index_2 in frame_index:
-                frame_path=os.path.join(folder_name,frame_raw_list[index_2])
-                tempimg=Image.open(frame_path)
-                frame_list.append(self.transform(tempimg))
-        while(len(frame_list)<self.frame_num):
-            frame_list.append(self.endPad)
-        frame_data=torch.stack(frame_list,dim=0)
-            
-        return (frame_data,audio_img,labels)
+            frame_raw_list=sorted(frame_raw_list)
+           # print(frame_raw_list)
+            frame_list=[]
+            if frame_len<self.frame_num:
+                for index_0 in range(frame_len):
+                    frame_path=os.path.join(folder_name,frame_raw_list[index_0])               
+                    tempimg=Image.open(frame_path)       
+                    frame_list.append(self.transform(tempimg))
+
+            else:    
+                frame_index=(np.linspace(0,frame_len-1,self.frame_num,dtype=int))
+                for index_2 in frame_index:
+                    frame_path=os.path.join(folder_name,frame_raw_list[index_2])
+                    tempimg=Image.open(frame_path)
+                    frame_list.append(self.transform(tempimg))
+            while(len(frame_list)<self.frame_num):
+                frame_list.append(self.endPad)
+            frame_data=torch.stack(frame_list,dim=0)
+        
+
+
+        return (frame_data,face_data,labels)
     
 class multi_frames():
     def __init__(self,frame_list,channel=3,img_width=256,img_length=256,embed_dim=1000,frame_embedding=None):
@@ -132,65 +145,40 @@ class multi_frames():
 
         
 
-class frame():
-    def __init__(self,frame_img,frame_name,max_face=5):
-        self.frame_img=frame_img
-        self._file_name=frame_name
-        self.transform_face=transforms.Compose([
-                                 transforms.Resize((32,32)), 
-                                 transforms.ToTensor(),
-                                 transforms.Normalize((0.5,0.5,0.5 ), (0.5, 0.5,0.5))])
-        
-        self.transform_frame=transforms.Compose([
-                     transforms.Resize((256,256)),
-                     transforms.ToTensor(),   
-                     transforms.Normalize((0.5,0.5,0.5 ), (0.5, 0.5,0.5))])
-
-        
-        def face_extraction(img,max_face):
-            bounding_boxes, landmarks = detect_faces(img)
-            img_list=[]
-            for box_index,(left,right,up,bottom,_) in enumerate(bounding_boxes):
-                cropped_img=img.crop((left,right,up,bottom))
-                img_list.append(self.transform_face(cropped_img))
-                if len(img_list)==max_face:
-                    break
-            while len(img_list) !=max_face:
-                END_PAD= Image.new(mode = "RGB", size = (256, 256), color =(0, 0, 0))
-                img_list.append(self.transform_face(END_PAD))
-            img_list=torch.stack(img_list)
-
-            return img_list
-        self.faces=face_extraction(self.frame_img,max_face)
-
-
-        
-        self.frame_img=self.transform_frame(frame_img)
 
         
         
     
         
-class Frame_Face(Dataset):
-    def __init__(self,csv_file,sub_csv_file=None,
-                 base_path_v=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False):
-        
-        self.max_frame_num=24
+class Face_Data(Dataset):
+    def __init__(self,csv_file,face_path=None):
+        self.frame_num=25
+        self.max_frame_num=25
         self._table = pd.read_csv(csv_file,delimiter=' ')
-        if sub_csv_file is None:
-            self._table_embedding=None
-        else:
-            self._table_embedding=pd.read_csv(sub_csv_file)
-        self.frame_num = frame_num
-        self._base_path_v=base_path_v
-        self._base_path_a=base_path_a
-        self.embedding=embedding
-        if strict_name:
-            self.name_format=name_format
-            
-
         self.transform=transforms.Compose([
-                     transforms.Resize((256,256)),
                      transforms.ToTensor(),   
                      transforms.Normalize((0.5,0.5,0.5 ), (0.5, 0.5,0.5))])
-        self.endPad=self.transform(Image.new(mode='RGB', size=(256,256), color=0))
+        self.face_path=face_path
+
+
+            
+    def __getitem__(self, idx):
+        folder_name = os.path.join(self.face_path,self._table.Vid_name[idx])
+        frame_raw_list=os.listdir(folder_name)
+        frame_len=len(frame_raw_list)
+
+        frame_raw_list=sorted(frame_raw_list)
+           # print(frame_raw_list)
+        frame_list=[]
+  
+        frame_index=(np.linspace(0,frame_len-1,self.frame_num,dtype=int))
+        for index_2 in frame_index:
+            frame_path=os.path.join(folder_name,frame_raw_list[index_2])
+            tempimg=Image.open(frame_path)
+            frame_list.append(self.transform(tempimg))
+        while(len(frame_list)<self.frame_num):
+            frame_list.append(self.endPad)
+        frame_data=torch.stack(frame_list,dim=0)
+            
+        return (frame_data,self._table.Vid_name[idx])
+        

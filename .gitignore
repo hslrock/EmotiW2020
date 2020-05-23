@@ -6,3 +6,7 @@
 *.h
 *.csv
 *.training-checkpoint.csv
+*.pt
+*.mdl
+*.jpg
+*.pth
