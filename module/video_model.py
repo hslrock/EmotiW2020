@@ -76,31 +76,47 @@ class Video_modeller(nn.Module):
 
     def __init__(self,frame,face_model,frame_model):
         super().__init__()
-        
+        self.num_frame=frame
+        self.num_face=5
         self.en1=Encoder(num_frame=5,dim=512,model=face_model,isframe=0,label=512)
         self.en2=Encoder(num_frame=frame,dim=512,model=None,isframe=1,label=3)
         self.embedder=densenet.densenet121(pretrained=True)
+        self.frame_model=frame_model
+        self.face_model=face_model
         self.fc1=nn.Linear(1000,512)
         self.fc2=nn.Linear(1000,512)
         self.fc3=nn.Linear(1024,512)
     def face_embedder(self,x,t,encoder):
-        x1 = (encoder(x[:, t,:]))  # Pretrained_Densenet            
+        x1 = (self.encoder(x[:, t,:]))  # Pretrained_Densenet            
         x1 = x1.view(x1.size(0), -1)
+    def check_raw(self,x,dim):
+        return x.shape[-1]==dim
+
         return x1
     def frame_embedder(self,x,t,embedder):
         x1 = (embedder(x[:, t, :, :, :]))  # Pretrained_Densenet
         x1 = x1.view(x1.size(0), -1)
         
         return x1
-    def check_raw(self,x,dim):
-        return x.shape[-1]==dim
 
         
         return None
     def stack_face_encoder(self,x):
         ##Transformation to: Frames*Channel*width*height
-        cnn_embed_seq = []
-     
+        
+        if not check_raw(self,x,1000):
+            frame_sequence = torch.empty(size=(x.size(0),self.num_frame,self.num_face,1000))
+
+            for frame in range(x.size(1)):
+                face_sequence=torch.empty(size=(5,24))
+
+                x1=x[:, frame, :,:, :]
+                for face in range(x.size(2)):
+                    x2=x1[:,face,:,:]
+                    x2=self.face_model(x2)
+                    face_sequence[face]=x2
+                frame_sequence[frame]=face_sequence
+            x=frame_sequence
         for t in range(x.size(1)):
             with torch.no_grad():
                 x1=self.face_embedder(x,t,self.en1)
