@@ -2,6 +2,7 @@
 AFFECTNETPATH="../../../hdd/Dataset/AffectNet/cropped_Annotated"
 EMOTIPATH="../../../hdd/Dataset/EmotiW/images"
 EMOTIFACEPATH="../../../hdd/Dataset/EmotiW/Face_Cropped"
+EMOTIAUDIOPATH="../../../hdd/Dataset/EmotiW/Audio"
 
 def show_image(data):
     import matplotlib.pyplot as plt

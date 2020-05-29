@@ -5,16 +5,16 @@ import torch.nn.functional as F
 
 class Face_Feature(nn.Module):
     
-    def __init__(self):
+    def __init__(self,resnet):
         super(Face_Feature, self).__init__()
-        self.resnet1=resnet_o.resnet18()
-        self.fc1=nn.Linear(100,1)
+        self.resnet=resnet
+        self.fc1=nn.Linear(1000,512)
+        self.fc2=nn.Linear(512,1)
+        self.relu=nn.ReLU()
         self.tanh=nn.Tanh()
     def forward(self,x):
   
-        x=self.resnet1(x)  
-        x1=self.tanh(self.fc1(x))
+        x=self.resnet(x)  
+        x1=(self.fc2(self.relu((self.fc1(x)))))
         return x1
     
-if __name__ == '__main__':
-    print("hi")

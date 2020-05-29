@@ -60,8 +60,8 @@ class Video_Frame_Data(Dataset):
         return len(self._table)
 
     def __getitem__(self, idx):
-        
-        face_folder_name = os.path.join(self.face_path,self._table.Vid_name[idx])
+        video_name=self._table.Vid_name[idx]
+        face_folder_name = os.path.join(self.face_path,video_name)
         faces_path=face_folder_name+'.pt'
         temp_face_data=torch.load(faces_path)
             
