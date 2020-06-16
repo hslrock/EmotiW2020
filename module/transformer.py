@@ -85,7 +85,7 @@ class MultiHeadAttention(nn.Module):
         q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
         k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
         v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
-        #v = v.view(sz_b, len_v, n_head, d_v)
+        v = v.view(sz_b, len_v, n_head, d_v)
         # Transpose for attention dot product: b x n x lq x dv
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
         

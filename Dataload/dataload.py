@@ -33,9 +33,10 @@ class pre_train_data(Dataset):
 
 class Video_Frame_Data(Dataset):
     def __init__(self,csv_file,sub_csv_file=None,
-                 base_path_v=None,face_path=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False,direct=False):
+                 base_path_v=None,face_path=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False,direct=False,audio_csv=None):
         
         self.max_frame_num=25
+        self._audio_table=pd.read_csv(audio_csv)
         self._table = pd.read_csv(csv_file,delimiter=' ')
         if sub_csv_file is None:
             self._table_embedding=None
@@ -64,6 +65,9 @@ class Video_Frame_Data(Dataset):
         face_folder_name = os.path.join(self.face_path,video_name)
         faces_path=face_folder_name+'.pt'
         temp_face_data=torch.load(faces_path)
+ 
+        
+        0.5
             
         if self.frame_num<self.max_frame_num:
                 face_data=torch.empty(size=(self.frame_num,self.face_num,3,64,64),dtype=torch.double)
@@ -74,7 +78,8 @@ class Video_Frame_Data(Dataset):
             face_data=temp_face_data
         
         folder_name = os.path.join(self._base_path_v,self._table.Vid_name[idx])
-
+        audio_feature=self._audio_table.loc[self._audio_table.file_name ==self._table.Vid_name[idx]+'.arff']
+        audio_feature=pd.to_numeric(audio_feature.values[0][2:])
         labels = torch.from_numpy(np.array(self._table.Label[idx]))-1
             
         if self._table_embedding is not None:
@@ -85,7 +90,7 @@ class Video_Frame_Data(Dataset):
  
                 for i,copy in enumerate(index):
                     frame_data[i]=temp_frame_embedding[copy]
-            return (frame_data,face_data,labels)
+            return (frame_data,face_data,audio_feature,labels)
         
         if self.direct:
             
@@ -101,47 +106,10 @@ class Video_Frame_Data(Dataset):
             else:
                 frame_data=temp_frame_data
                 
-            return (frame_data,face_data,labels)
+            return (frame_data,face_data,audio_feature,labels)
           #  frame_data=torch.load(os.path.join(folder_name))
-        else:
-            frame_raw_list=os.listdir(folder_name)
-            frame_len=len(frame_raw_list)
 
-            frame_raw_list=sorted(frame_raw_list)
-           # print(frame_raw_list)
-            frame_list=[]
-            if frame_len<self.frame_num:
-                for index_0 in range(frame_len):
-                    frame_path=os.path.join(folder_name,frame_raw_list[index_0])               
-                    tempimg=Image.open(frame_path)       
-                    frame_list.append(self.transform(tempimg))
-
-            else:    
-                frame_index=(np.linspace(0,frame_len-1,self.frame_num,dtype=int))
-                for index_2 in frame_index:
-                    frame_path=os.path.join(folder_name,frame_raw_list[index_2])
-                    tempimg=Image.open(frame_path)
-                    frame_list.append(self.transform(tempimg))
-            while(len(frame_list)<self.frame_num):
-                frame_list.append(self.endPad)
-            frame_data=torch.stack(frame_list,dim=0)
-        
-
-
-        return (frame_data,face_data,labels)
     
-class multi_frames():
-    def __init__(self,frame_list,channel=3,img_width=256,img_length=256,embed_dim=1000,frame_embedding=None):
-        self.frame_list=frame_list
-        
-        if frame_embedding is None: 
-            self.frames = torch.empty(size=(len(frame_list), channel, img_width,img_length)) 
-            for index,element in enumerate(frame_list):
-                self.frames[index]=element.frame_img
-        else:
-            self.frames=frame_embedding
-    def __len__(self):
-        return len(self.frame_list)
 
         
 
