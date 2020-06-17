@@ -36,7 +36,7 @@ class Encoder(nn.Module):
         # Jointing Training requires feature vector as output
         # if isframe==1, it would give output as label vecltor [positive,negative neutral]
         if self.joint ==0:
-            return output
+            return output.squeeze(1)
         
         output=F.relu(output)
         output=self.fc1(output)
@@ -91,54 +91,44 @@ class Video_modeller(nn.Module):
         
         self.dropout=nn.Dropout(0.1)
     #Embeds face image(2D) to a vector (1D)
-    def face_embedder(self,x,t,encoder):
-        x1 = (encoder(x[:, t,:]))          #x=[batchsize:frame:face:l*w] ->x1=[batchsize:l*w] (select one face from each batch)
-        x1 = x1.view(x1.size(0), -1)      #x=[batchsize*flat]
-        return x1
     #Embeds frame image(2D) to a vector (1D)
     def frame_embedder(self,x,t,embedder):
         x1 = (embedder(x[:, t, :]))  # Similar to above
-        x1 = x1.view(x1.size(0), -1)
-        
         return x1    
     
     ##To be removed
     def check_raw(self,x,dim):
         return x.shape[-1]==dim
 
-
-
     def stack_face_encoder(self,x):
         #x=[batch_size:frame:face:channel:legth:width]
         if not self.check_raw(x,1000):
-            frame_sequence = []
+            frame_sequence = torch.empty(size=(x.size(1),x.size(0),x.size(2),1000))
 
             for frame in range(x.size(1)): #For every Frame
                 face_sequence=torch.empty(size=(self.num_face,x.size(0),1000))
                 x1=x[:, frame, :,:, :]
                 
                 for face in range(x.size(2)): #For every Face in the frame
-                    x2=x1[:,face,:,:]
-                    x2=self.face_model(x2) #x2 =[batchsize*1000]
-                    face_sequence[face]=x2 
+                    with torch.no_grad():
+                        x2=x1[:,face,:,:]
+                        x2=self.face_model(x2) #x2 =[batchsize*1000]
+                        face_sequence[face]=x2 
                 
                 
-                face_sequence=face_sequence.transpose_(0,1)
+                face_sequence=face_sequence.transpose_(0,1)  #face_num*batch_num*1000->batch*face*1000
 
                 
-                frame_sequence.append(face_sequence)
-            x=torch.stack(frame_sequence, dim=0)
+                frame_sequence[frame]=face_sequence #frame*batch*face_num*1000
+            frame_sequence=frame_sequence.transpose_(0,1)
 
-            x=self.fc2(x)
+            x=self.fc2(frame_sequence) #x=batch*frame*face_num*128
 
-
-        cnn_embed_seq = []
+        face_seq = torch.empty(size=(x.size(1),x.size(0),128))
         for t in range(x.size(1)):       
-            x1=self.face_embedder(x,t,self.en1)
-            cnn_embed_seq.append(x1) 
-        cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0)
-
-        return cnn_embed_seq
+            x1=self.en1(x[:,t,:]) 
+            face_seq[t]=x1
+        return face_seq.transpose_(0, 1) #return=batch*frame*128
     
     def stack_frame(self,x):
         ##Transformation to: Frames*Channel*width*height
@@ -146,10 +136,10 @@ class Video_modeller(nn.Module):
 
         for t in range(x.size(1)):
             with torch.no_grad():
-                x1=self.frame_embedder(x,t,self.frame_model)
+                x1=self.frame_model(x[:, t, :])
                 frame_seq[t]=x1
         
-        return frame_seq.transpose_(0, 1)
+        return frame_seq.transpose_(0, 1) #frame_seq=batch*frame*1000
     
     def forward(self,x,y):
         if y is not None:
@@ -159,7 +149,7 @@ class Video_modeller(nn.Module):
         if x is not None:
 
             frame_global=self.stack_frame(x)  
-            frame_global=self.fc2(frame_global)
+            frame_global=self.fc2(frame_global) #frame_seq=batch*frame*128
             
         if y is None:
             
@@ -169,7 +159,7 @@ class Video_modeller(nn.Module):
             return self.en2(frame_local)            
   
         
-        frames_embedding=torch.cat((frame_global,frame_local),2)
+        frames_embedding=torch.cat((frame_global,frame_local),2) #global_embedding (concat) local_embedding
 
         frames_embedding=self.fc3(frames_embedding)
         video_embed=self.en2(frames_embedding) 

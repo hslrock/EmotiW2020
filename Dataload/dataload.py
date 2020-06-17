@@ -11,24 +11,7 @@ import torch
 np_load_old = np.load
 
 np.load = lambda *a,**k: np_load_old(*a, allow_pickle=True, **k)
-class pre_train_data(Dataset):
-    def __init__(self, csv_file,path):
-        self._table=pd.read_csv(csv_file)
-        self.path=path
-        self.transform=transforms.Compose([
-                     transforms.Resize((128,128)),
-                     transforms.ToTensor(),                
-                     transforms.Normalize((0.5,), (0.5,))])
-    def __len__(self):
-        return len(self._table)
 
-    def __getitem__(self, idx):
-        folder_name = self.path
-        img=Image.open(os.path.join(folder_name,self._table.file_path[idx])).convert('L')
-
-        img=self.transform(img)
-        
-        return img
         
 
 class Video_Frame_Data(Dataset):
@@ -66,9 +49,6 @@ class Video_Frame_Data(Dataset):
         faces_path=face_folder_name+'.pt'
         temp_face_data=torch.load(faces_path)
  
-        
-        0.5
-            
         if self.frame_num<self.max_frame_num:
                 face_data=torch.empty(size=(self.frame_num,self.face_num,3,64,64),dtype=torch.double)
                 index=np.linspace(0,self.max_frame_num-1,self.frame_num,dtype=int)
