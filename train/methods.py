@@ -1,5 +1,5 @@
 from sklearn.metrics import confusion_matrix
-
+import torch
 def num_correct(prediction,labels):
     correct=0
     for i,(pred_label,label) in enumerate(zip(prediction,labels)):
@@ -8,14 +8,14 @@ def num_correct(prediction,labels):
     return correct
 
 
-def face_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion):
+def face_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
     f = open(master_path +"/"+name+".txt",'a')
     #Triaining
     train_loss=[]
     valid_accuracy=[]
     model.train()
     for epochs in range(0,num_epochs):        
-        print("Epoch: ", epochs+1,"\n)
+        print("Epoch: ", epochs+1,"\n")
         model.eval()   
         correct=0
         total_samples=0
@@ -95,14 +95,14 @@ def face_train(master_path,num_epochs,name,model,train_dataloader,valid_dataload
 
     f.close()
               
-def frame_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion):
+def frame_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
     f = open(master_path +"/"+name+".txt",'a')
     #Triaining
     train_loss=[]
     valid_accuracy=[]
     model.train()
     for epochs in range(0,num_epochs):        
-        print("Epoch: ", epochs+1,"\n)
+        print("Epoch: ", epochs+1,"\n")
         model.eval()   
         correct=0
         total_samples=0
@@ -183,14 +183,14 @@ def frame_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
     f.close()
 
 
-def image_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion):
+def image_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
     f = open(master_path +"/"+name+".txt",'a')
     #Triaining
     train_loss=[]
     valid_accuracy=[]
     model.train()
     for epochs in range(0,num_epochs):        
-        print("Epoch: ", epochs+1,"\n)
+        print("Epoch: ", epochs+1,"\n")
         model.eval()   
         correct=0
         total_samples=0
@@ -271,14 +271,14 @@ def image_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
     f.close()
 
               
-def audio_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion):
+def audio_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
     f = open(master_path +"/"+name+".txt",'a') 
               #Triaining
     train_loss=[]
     valid_accuracy=[]
     model.train()
     for epochs in range(0,num_epochs):        
-        print("Epoch: ", epochs+1,"\n)
+        print("Epoch: ", epochs+1,"\n")
         model.eval()   
         correct=0
         total_samples=0
@@ -358,14 +358,14 @@ def audio_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
 
     f.close()
 
-def full_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion):
+def full_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
     f = open(master_path +"/"+name+".txt",'a') 
               #Triaining
     train_loss=[]
     valid_accuracy=[]
     model.train()
     for epochs in range(0,num_epochs):        
-        print("Epoch: ", epochs+1,"\n)
+        print("Epoch: ", epochs+1,"\n")
         model.eval()   
         correct=0
         total_samples=0
