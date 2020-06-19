@@ -88,7 +88,7 @@ class Video_modeller(nn.Module):
         self.fc1=nn.Linear(1000,128)
         self.fc2=nn.Linear(1000,128)
         self.fc3=nn.Linear(256,128)
-        
+        self.tanh=nn.Tanh()
         self.dropout=nn.Dropout(0.1)
     #Embeds face image(2D) to a vector (1D)
     #Embeds frame image(2D) to a vector (1D)
@@ -122,7 +122,7 @@ class Video_modeller(nn.Module):
                 frame_sequence[frame]=face_sequence #frame*batch*face_num*1000
             frame_sequence=frame_sequence.transpose_(0,1)
 
-            x=self.fc2(frame_sequence) #x=batch*frame*face_num*128
+            x=self.tanh(self.fc1(frame_sequence)) #x=batch*frame*face_num*128
 
         face_seq = torch.empty(size=(x.size(1),x.size(0),128))
         for t in range(x.size(1)):       
@@ -149,7 +149,7 @@ class Video_modeller(nn.Module):
         if x is not None:
 
             frame_global=self.stack_frame(x)  
-            frame_global=self.fc2(frame_global) #frame_seq=batch*frame*128
+            frame_global=self.tanh(self.fc2(frame_global)) #frame_seq=batch*frame*128
             
         if y is None:
             
