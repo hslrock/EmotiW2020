@@ -57,13 +57,37 @@ class video_transformer(nn.Module):
 
     def forward(self,x,y,z):
         x=self.video_model(x,y)
-        x=x.squeeze(1)
         z=self.audio_model(z)
 
         output=torch.cat((x,z),1)
         output=self.fc2(self.relu(self.fc1(output)))
         return F.softmax(output,1)
     
+class video_transformer_attention(nn.Module):
+    #Model to concaneates the video embedding and audio embedding
+    def __init__(self,video_model,audio_model,pre_train=True):
+        super().__init__()
+        self.video_model=video_model
+        self.audio_model=audio_model
+        self.fc1=nn.Linear(128,1)
+        self.fc2=nn.Linear(128,3)
+        self.relu=nn.ReLU()
+   
+
+    def forward(self,x,y,z):
+        x=self.video_model(x,y)
+        z=self.audio_model(z)
+        
+        video_audio=torch.cat((x,z),1).view(x.size(0),2,128)
+        weight=self.relu(self.fc1(video_audio))
+        weight=F.softmax(weight,dim=1)
+        
+        output=torch.matmul(video_audio.transpose(1,2), weight_softmax)
+        output=output.transpose(1,2)
+        output=self.fc2(output)
+        
+        return F.softmax(output,1)
+        
 
 class Video_modeller(nn.Module):
 
@@ -196,7 +220,7 @@ class Face_Feature(nn.Module):
     def __init__(self,resnet):
         super(Face_Feature, self).__init__()
         self.resnet=resnet
-        self.fc1=nn.Linear(1000,1)
+        self.fc1=nn.Linear(128,1)
 
         self.tanh=nn.Tanh()
     def forward(self,x):

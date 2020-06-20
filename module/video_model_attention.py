@@ -101,17 +101,18 @@ class Video_modeller(nn.Module):
 
     def stack_face_encoder(self,x):
         #x=[batch_size:frame:face:channel:legth:width]
-        if not self.check_raw(x,1000):
-            frame_sequence = torch.empty(size=(x.size(1),x.size(0),x.size(2),1000))
+        if not self.check_raw(x,128):
+            frame_sequence = torch.empty(size=(x.size(1),x.size(0),x.size(2),128))
 
             for frame in range(x.size(1)): #For every Frame
-                face_sequence=torch.empty(size=(self.num_face,x.size(0),1000))
+                face_sequence=torch.empty(size=(self.num_face,x.size(0),128))
                 x1=x[:, frame, :,:, :]
                 
                 for face in range(x.size(2)): #For every Face in the frame
                     with torch.no_grad():
                         x2=x1[:,face,:,:]
                         x2=self.face_model(x2) #x2 =[batchsize*1000]
+                      #  print(x2.shape)
                         face_sequence[face]=x2 
                 
                 
@@ -121,7 +122,7 @@ class Video_modeller(nn.Module):
                 frame_sequence[frame]=face_sequence #frame*batch*face_num*1000
             frame_sequence=frame_sequence.transpose_(0,1)
 
-            x=self.fc2(frame_sequence) #x=batch*frame*face_num*128
+            x=(frame_sequence) #x=batch*frame*face_num*128
 
         face_seq = torch.empty(size=(x.size(1),x.size(0),128))
         for t in range(x.size(1)):       
@@ -170,18 +171,19 @@ class AudioRecognition(nn.Module):
     def __init__(self,softmax=True,label=3):
         super(AudioRecognition, self).__init__()
         self.label=label
-        self.fc1=nn.Linear(988,512)
+        self.fc1=nn.Linear(6372,512)
         self.fc2=nn.Linear(512,128)
 
         self.fc3=nn.Linear(128,self.label)
-        self.bn1 = nn.BatchNorm1d(num_features=512)
-        self.bn2=nn.BatchNorm1d(num_features=128)
+       # self.bn1 = nn.BatchNorm1d(num_features=512)
+      #  self.bn2=nn.BatchNorm1d(num_features=128)
         self.relu = nn.ReLU()
+        self.tanh=nn.Tanh()
         self.softmax=softmax
         
     def forward(self,x):
-        x=self.bn1(self.fc1(x))
-        x=self.bn2(self.fc2(x))
+        x=(self.fc1(x))
+        x=self.relu((self.fc2(x)))
         
         
         if self.softmax:

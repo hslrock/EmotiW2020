@@ -16,7 +16,7 @@ np.load = lambda *a,**k: np_load_old(*a, allow_pickle=True, **k)
 
 class Video_Frame_Data(Dataset):
     def __init__(self,csv_file,sub_csv_file=None,
-                 base_path_v=None,face_path=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False,direct=False,audio_csv=None):
+                 base_path_v=None,face_path=None,base_path_a=None,frame_num=16,strict_name=True,name_format=9,embedding=False,direct=False,audio_csv=None,train_mode=True):
         
         self.max_frame_num=25
         self._audio_table=pd.read_csv(audio_csv)
@@ -30,6 +30,7 @@ class Video_Frame_Data(Dataset):
         self._base_path_a=base_path_a
         self.face_path=face_path
         self.face_num=5
+        self.train_mode=train_mode
         self.embedding=embedding
         if strict_name:
             self.name_format=name_format
@@ -59,8 +60,9 @@ class Video_Frame_Data(Dataset):
         
         folder_name = os.path.join(self._base_path_v,self._table.Vid_name[idx])
         audio_feature=self._audio_table.loc[self._audio_table.file_name ==self._table.Vid_name[idx]+'.arff']
-        audio_feature=pd.to_numeric(audio_feature.values[0][2:])
-        labels = torch.from_numpy(np.array(self._table.Label[idx]))-1
+        audio_feature=torch.from_numpy(pd.to_numeric(audio_feature.values[0][2:]))
+        if self.train_mode:
+            labels = torch.from_numpy(np.array(self._table.Label[idx]))-1
             
         if self._table_embedding is not None:
             temp_frame_embedding=torch.from_numpy(np.array(self._table_embedding.Embedding[idx].split(),dtype=float)).reshape((self.max_frame_num,-1))
