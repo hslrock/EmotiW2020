@@ -60,7 +60,7 @@ class Video_Frame_Data(Dataset):
         
         folder_name = os.path.join(self._base_path_v,self._table.Vid_name[idx])
         audio_feature=self._audio_table.loc[self._audio_table.file_name ==self._table.Vid_name[idx]+'.arff']
-        audio_feature=torch.from_numpy(pd.to_numeric(audio_feature.values[0][2:]))
+        audio_feature=torch.from_numpy(pd.to_numeric(audio_feature.values[0][3:]))
         if self.train_mode:
             labels = torch.from_numpy(np.array(self._table.Label[idx]))-1
             

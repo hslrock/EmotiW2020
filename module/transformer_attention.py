@@ -102,7 +102,7 @@ class MultiHeadAttention(nn.Module):
         z = z.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
         z = self.dropout(self.fc(z))
 
-        z += residual
+       # z += residual
         weight=self.relu(self.squeeze(z))
         weight=F.softmax(weight,dim=1)
         z=torch.matmul(z.transpose(1,2), weight)

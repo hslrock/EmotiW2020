@@ -87,7 +87,7 @@ def face_train(master_path,num_epochs,name,model,train_dataloader,valid_dataload
         print("Average_Accuracy: ",avg_taccuracy)
         print('Confusion Matrix: \n',conf_mat)
         if epochs>0:
-            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs)+".pth")
+            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs+1)+".pth")
         
         data = " %f,%f,%f,%f \n" % (avg_tloss,avg_taccuracy,avg_vloss,avg_vaccuracy)
         f.write(data)
@@ -174,14 +174,14 @@ def frame_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
         print("Average_Accuracy: ",avg_taccuracy)
         print('Confusion Matrix: \n',conf_mat)
         if epochs>=0:
-            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs)+".pth")
+            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs+1)+".pth")
         
         data = " %f,%f,%f,%f \n" % (avg_tloss,avg_taccuracy,avg_vloss,avg_vaccuracy)
         f.write(data)
 
 
 
-        f.close()
+    f.close()
 
 
 def image_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
@@ -263,14 +263,14 @@ def image_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
         print("Average_Accuracy: ",avg_taccuracy)
         print('Confusion Matrix: \n',conf_mat)
         if epochs>0:
-            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs)+".pth")
+            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs+1)+".pth")
         
         data = " %f,%f,%f,%f \n" % (avg_tloss,avg_taccuracy,avg_vloss,avg_vaccuracy)
         f.write(data)
 
 
 
-        f.close()
+    f.close()
 
               
 def audio_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
@@ -351,7 +351,7 @@ def audio_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloa
         print("Average_Accuracy: ",avg_taccuracy)
         print('Confusion Matrix: \n',conf_mat)
         if epochs+1>0:
-            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs)+".pth")
+            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs+1)+".pth")
         
         data = " %f,%f,%f,%f \n" % (avg_tloss,avg_taccuracy,avg_vloss,avg_vaccuracy)
         f.write(data)
@@ -441,7 +441,7 @@ def full_train(master_path,num_epochs,name,model,train_dataloader,valid_dataload
         print("Average_Accuracy: ",avg_taccuracy)
         print('Confusion Matrix: \n',conf_mat)
         if epochs>0:
-            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs)+".pth")
+            torch.save(model.state_dict(),master_path+"/"+name+"_"+str(epochs+1)+".pth")
         
         data = " %f,%f,%f,%f \n" % (avg_tloss,avg_taccuracy,avg_vloss,avg_vaccuracy)
         f.write(data)
