@@ -57,6 +57,8 @@ class video_transformer(nn.Module):
     def forward(self,x,y,z):
         x=self.video_model(x,y)
         x=x.squeeze(1)
+        
+        
         z=self.audio_model(z)
 
         output=torch.cat((x,z),1)
@@ -171,20 +173,19 @@ class AudioRecognition(nn.Module):
     def __init__(self,softmax=True,label=3):
         super(AudioRecognition, self).__init__()
         self.label=label
-        self.fc1=nn.Linear(6366,512)
+        self.fc1=nn.Linear(988,512)
         self.fc2=nn.Linear(512,128)
 
         self.fc3=nn.Linear(128,self.label)
-       # self.bn1 = nn.BatchNorm1d(num_features=512)
-      #  self.bn2=nn.BatchNorm1d(num_features=128)
+        self.bn1 = nn.BatchNorm1d(num_features=512)
+#        self.bn2=nn.BatchNorm1d(num_features=128)
         self.relu = nn.ReLU()
-        self.tanh=nn.Tanh()
         self.softmax=softmax
+        self.tanh=nn.Tanh()
         
     def forward(self,x):
-        x=(self.fc1(x))
-        x=((self.fc2(x)))
-        
+        x=self.bn1(self.fc1(x))
+        x=self.tanh((self.fc2(x)))
         
         if self.softmax:
             x=(self.relu(self.fc3(x)))
@@ -205,3 +206,102 @@ class Face_Feature(nn.Module):
         x=self.resnet(x)  
         x1=self.tanh(self.fc1(x))
         return x1
+class video_transformer_attention(nn.Module):
+    #Model to concaneates the video embedding and audio embedding
+    def __init__(self,video_model,audio_model,pre_train=True):
+        super().__init__()
+        self.video_model=video_model
+        self.audio_model=audio_model
+        self.fc1=nn.Linear(128,1)
+        self.fc2=nn.Linear(128,3)
+        self.relu=nn.ReLU()
+   
+
+    def forward(self,x,y,z):
+        x=self.video_model(x,y)
+        z=self.audio_model(z)
+        
+        video_audio=torch.cat((x,z),1).view(x.size(0),2,128)
+        weight=self.relu(self.fc1(video_audio))
+        weight=F.softmax(weight,dim=1)
+        
+        output=torch.matmul(video_audio.transpose(1,2), weight)
+        output=output.transpose(1,2)
+        output=self.fc2(output)
+        output.squeeze(1)
+        output=F.softmax(output,2)
+        output=output.squeeze(1)
+        return output
+
+
+class Video_modeller_global_only(nn.Module):
+
+    def __init__(self,frame,frame_model=None,pre_train=True):
+        super().__init__()
+        
+        ##Num of Frames/face extracted
+        self.num_frame=frame
+        
+        #Loading Pretrained Indirectly/Directly
+        self.frame_model=models.resnet18(pretrained=True) if frame_model==None else frame_model    
+
+        self.en2=Encoder(num_frame=frame,dim=128,model=self.frame_model,joint=pre_train)
+              
+        #Dimension Reduction from dim= 1000 frame/face feature (face_feature reduced to be later)
+        self.fc2=nn.Linear(1000,128)
+        self.fc3=nn.Linear(256,128)
+        
+        self.dropout=nn.Dropout(0.1)
+    #Embeds face image(2D) to a vector (1D)
+    #Embeds frame image(2D) to a vector (1D)
+    def frame_embedder(self,x,t,embedder):
+        x1 = (embedder(x[:, t, :]))  # Similar to above
+        return x1    
+    
+
+    def stack_frame(self,x):
+        ##Transformation to: Frames*Channel*width*height
+        frame_seq=torch.empty(size=(self.num_frame,x.size(0),1000))
+
+        for t in range(x.size(1)):
+            with torch.no_grad():
+                x1=self.frame_model(x[:, t, :])
+                frame_seq[t]=x1
+        
+        return frame_seq.transpose_(0, 1) #frame_seq=batch*frame*1000
+    def forward(self,x):
+
+
+
+        frame_global=self.stack_frame(x)  
+        frame_global=self.fc2(frame_global) #frame_seq=batch*frame*128
+
+            
+        return self.en2(frame_global)
+
+class video_transformer_attention1(nn.Module):
+    #Model to concaneates the video embedding and audio embedding
+    def __init__(self,video_model,audio_model,pre_train=True):
+        super().__init__()
+        self.video_model=video_model
+        self.audio_model=audio_model
+        self.fc1=nn.Linear(128,1)
+        self.fc2=nn.Linear(128,3)
+        self.relu=nn.ReLU()
+   
+
+    def forward(self,x,y):
+        x=self.video_model(x)
+        z=self.audio_model(y)
+        
+        video_audio=torch.cat((x,z),1).view(x.size(0),2,128)
+        weight=self.relu(self.fc1(video_audio))
+        weight=F.softmax(weight,dim=1)
+        
+        output=torch.matmul(video_audio.transpose(1,2), weight)
+        output=output.transpose(1,2)
+        output=self.fc2(output)
+        output.squeeze(1)
+        output=F.softmax(output,2)
+        output=output.squeeze(1)
+        return output

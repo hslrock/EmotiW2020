@@ -74,7 +74,7 @@ class MultiHeadAttention(nn.Module):
         self.squeeze=nn.Linear(d_model,1)
         self.relu=nn.ReLU()
         
-
+        self.tanh=nn.Tanh()
     def forward(self, q, k, v, mask=None):
 
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
@@ -100,11 +100,12 @@ class MultiHeadAttention(nn.Module):
         # Transpose to move the head dimension back: b x lq x n x dv
         # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
         z = z.transpose(1, 2).contiguous().view(sz_b, len_q, -1)
-        z = self.dropout(self.fc(z))
+        z = self.tanh(self.fc(z))
 
        # z += residual
         weight=self.relu(self.squeeze(z))
         weight=F.softmax(weight,dim=1)
         z=torch.matmul(z.transpose(1,2), weight)
+        z=z/z.size(0)
         z=z.transpose(1,2)
         return z, attn,weight
