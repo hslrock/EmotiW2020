@@ -1,9 +1,7 @@
-
-
 import os
 import subprocess
 
-
+#Code Used from https://github.com/alibugra/frame-extraction
 class FFMPEGFrames:
     def __init__(self, output,wav_output,folder_path,fps,):
         self.output = output

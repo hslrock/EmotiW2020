@@ -8,17 +8,6 @@ def num_correct(prediction,labels):
             correct +=1
     return correct
 
-def smooth_one_hot(true_labels: torch.Tensor, classes: int, smoothing=0.1):
-    confidence = 1.0 - smoothing
-    label_shape = torch.Size((true_labels.size(0), classes))
-    
-    with torch.no_grad():
-   #     if true_label
-        
-        true_dist = torch.empty(size=label_shape, device=true_labels.device)
-        true_dist.fill_(smoothing / (classes - 1))
-        true_dist.scatter_(1, true_labels.data.unsqueeze(1), confidence)
-    return true_dist
 
 
 def face_train(master_path,num_epochs,name,model,train_dataloader,valid_dataloader,optimizer,criterion,device):
