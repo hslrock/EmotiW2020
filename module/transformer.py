@@ -1,9 +1,9 @@
-
 import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
+# The code is directly followed from Yu-Hsiang Huang, attention-is-all-you-need-pytorch, GitHub repository, https://github.com/jadore801120/attention-is-all-you-need-pytorch
 class PositionalEncoding(nn.Module):
     
 
@@ -41,10 +41,6 @@ class ScaledDotProductAttention(nn.Module):
     def forward(self, q, k, v, mask=None):
 
         attn = torch.matmul(q / self.temperature, k.transpose(2, 3))
-
-        if mask is not None:
-            attn = attn.masked_fill(mask == 0, -1e9)
-
         attn = self.dropout(F.softmax(attn, dim=-1))
         output = torch.matmul(attn, v)
         
@@ -73,7 +69,7 @@ class MultiHeadAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
 
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v):
 
         d_k, d_v, n_head = self.d_k, self.d_v, self.n_head
         sz_b, len_q, len_k, len_v = q.size(0), q.size(1), k.size(1), v.size(1)
@@ -89,9 +85,6 @@ class MultiHeadAttention(nn.Module):
         v = v.view(sz_b, len_v, n_head, d_v)
         # Transpose for attention dot product: b x n x lq x dv
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
-        
-        if mask is not None:
-            mask = mask.unsqueeze(1)   # For head axis broadcasting.
 
         z, attn = self.attention(q, k, v, mask=mask)
 
